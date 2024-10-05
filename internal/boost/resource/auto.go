@@ -116,7 +116,11 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	podName := ctx.Value(ContextKey("podName"))
 	podNamespace := ctx.Value(ContextKey("podNamespace"))
 
+	fmt.Printf("podNamefromctx: %+v\n", podName)
+	fmt.Printf("podNamespacefromctx: %+v\n", podNamespace)
+
 	if podName == nil || podNamespace == nil {
+		fmt.Println("pod information not found in context")
 		return nil, fmt.Errorf("pod information not found in context")
 	}
 
@@ -127,8 +131,12 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	})
 
 	if err != nil {
+		fmt.Println("failed to marshal pod information")
 		return nil, fmt.Errorf("failed to marshal pod information: %w", err)
 	}
+
+	fmt.Printf("reqBody: %+v\n", reqBody)
+	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
 
 	// Create a new HTTP request with the pod information
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiEndpoint+"/cpu", bytes.NewBuffer(reqBody))
@@ -140,18 +148,23 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	// Send the HTTP request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		fmt.Println("failed to send request")
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Check for a successful response status code
 	if resp.StatusCode != http.StatusOK {
+		fmt.Println("unexpected status code")
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+
+	fmt.Printf("resp: %+v\n", resp)
 
 	// Decode the response body into a ResourcePrediction struct
 	var prediction ResourcePrediction
 	if err := json.NewDecoder(resp.Body).Decode(&prediction); err != nil {
+		fmt.Println("failed to decode response")
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 

@@ -79,6 +79,8 @@ func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boos
 	fmt.Println("PodUID: ", pod.UID)
 	fmt.Println("PodNamespace: ", pod.Namespace)
 
+	fmt.Printf("POD: %+v\n", pod)
+
 	podName := pod.Name
 	podGenerateName := pod.GenerateName
 	podNamespace := pod.Namespace
