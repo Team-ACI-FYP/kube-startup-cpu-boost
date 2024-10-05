@@ -74,10 +74,18 @@ func (h *podCPUBoostHandler) Handle(ctx context.Context, req admission.Request) 
 
 func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boost.StartupCPUBoost, pod *corev1.Pod, log logr.Logger) {
 
-	fmt.Printf("pod Info: %v", pod)
+	fmt.Println("PodName: ", pod.Name)
+	fmt.Println("PodGenerateName: ", pod.GenerateName)
+	fmt.Println("PodUID: ", pod.UID)
+	fmt.Println("PodNamespace: ", pod.Namespace)
 
 	podName := pod.Name
+	podGenerateName := pod.GenerateName
 	podNamespace := pod.Namespace
+
+	if podName == "" {
+		podName = podGenerateName
+	}
 
 	ctx = context.WithValue(ctx, resource.ContextKey("podName"), podName)
 	ctx = context.WithValue(ctx, resource.ContextKey("podNamespace"), podNamespace)
