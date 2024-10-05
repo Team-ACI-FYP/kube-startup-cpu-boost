@@ -15,7 +15,6 @@
 package resource
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -118,39 +117,31 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 
 	fmt.Printf("ctx: %+v\n", ctx)
 	// Retrieve the pod information from the context
-	podName := ctx.Value(ContextKey("podName"))
-	podNamespace := ctx.Value(ContextKey("podNamespace"))
+	podName := ctx.Value(ContextKey("podName")).(string)
+	podNamespace := ctx.Value(ContextKey("podNamespace")).(string)
 
 	fmt.Printf("podNamefromctx: %+v\n", podName)
 	fmt.Printf("podNamespacefromctx: %+v\n", podNamespace)
 
-	if podName == nil || podNamespace == nil {
+	if podName == "" || podNamespace == "" {
 		fmt.Println("pod information not found in context")
 		return nil, fmt.Errorf("pod information not found in context")
 	}
 
-	// Marshal the pod information to JSON
-	jsonData, err := json.Marshal(RequestPayload{
-		PodName:      podName.(string),
-		PodNamespace: podNamespace.(string),
-	})
-
-	if err != nil {
-		fmt.Println("failed to marshal pod information")
-		return nil, fmt.Errorf("failed to marshal pod information: %w", err)
-	}
-
-	fmt.Println("reqBody: \n", jsonData)
 	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
 
 	// Create a new HTTP request with the pod information
-	req, err := http.NewRequest("POST", p.apiEndpoint+"/cpu", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("GET", p.apiEndpoint+"/resource", nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new request: %w", err)
+		fmt.Println("failed to create request")
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
 
-	// Send the HTTP request
+	q := req.URL.Query()
+	q.Add("podName", podName)
+	q.Add("podNamespace", podNamespace)
+	req.URL.RawQuery = q.Encode()
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {

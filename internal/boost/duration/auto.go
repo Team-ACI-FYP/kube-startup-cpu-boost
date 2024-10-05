@@ -75,16 +75,18 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 	podName := pod.Name
 	podNamespace := pod.Namespace
 
-	podData, err := json.Marshal(RequestPayload{
-		PodName:      podName,
-		PodNamespace: podNamespace,
-	})
-
+	req, err := http.NewRequest("GET", p.apiEndpoint+"/duration", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := http.Post(p.apiEndpoint+"/duration", "application/json", bytes.NewBuffer(podData))
+	q := req.URL.Query()
+	q.Add("podName", podName)
+	q.Add("podNamespace", podNamespace)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
