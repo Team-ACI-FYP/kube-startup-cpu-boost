@@ -131,7 +131,7 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
 
 	// Create a new HTTP request with the pod information
-	req, err := http.NewRequest("GET", p.apiEndpoint+"/resource", nil)
+	req, err := http.NewRequest("GET", p.apiEndpoint+"/cpu", nil)
 	if err != nil {
 		fmt.Println("failed to create request")
 		return nil, fmt.Errorf("failed to create request: %w", err)

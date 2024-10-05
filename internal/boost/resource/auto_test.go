@@ -73,12 +73,15 @@ var _ = Describe("Auto Resource Policy", func() {
 		Context("when the API returns valid predictions", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprintln(GinkgoWriter, "Request URL:", r.URL)
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					podName := queryParams.Get("podName")
+					podNamespace := queryParams.Get("podNamespace")
+
+					Expect(podName).To(Equal("test-pod"))
+					Expect(podNamespace).To(Equal("test-namespace"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "500m",
@@ -118,11 +121,13 @@ var _ = Describe("Auto Resource Policy", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					podName := queryParams.Get("podName")
+					podNamespace := queryParams.Get("podNamespace")
+
+					Expect(podName).To(Equal("test-pod"))
+					Expect(podNamespace).To(Equal("test-namespace"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "400m",
@@ -162,11 +167,13 @@ var _ = Describe("Auto Resource Policy", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					podName := queryParams.Get("podName")
+					podNamespace := queryParams.Get("podNamespace")
+
+					Expect(podName).To(Equal("test-pod"))
+					Expect(podNamespace).To(Equal("test-namespace"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "600m",
