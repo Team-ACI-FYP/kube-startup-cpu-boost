@@ -28,6 +28,11 @@ const (
 	AutoDurationPolicyName = "AutoDuration"
 )
 
+type RequestPayload struct {
+	PodName      string `json:"podName"`
+	PodNamespace string `json:"podNamespace"`
+}
+
 type AutoDurationPolicy struct {
 	apiEndpoint string
 }
@@ -70,9 +75,9 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 	podName := pod.Name
 	podNamespace := pod.Namespace
 
-	podData, err := json.Marshal(map[string]string{
-		"podName":      podName,
-		"podNamespace": podNamespace,
+	podData, err := json.Marshal(RequestPayload{
+		PodName:      podName,
+		PodNamespace: podNamespace,
 	})
 
 	if err != nil {
@@ -97,9 +102,9 @@ func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 	podName := pod.Name
 	podNamespace := pod.Namespace
 
-	podData, err := json.Marshal(map[string]string{
-		"podName":      podName,
-		"podNamespace": podNamespace,
+	podData, err := json.Marshal(RequestPayload{
+		PodName:      podName,
+		PodNamespace: podNamespace,
 	})
 
 	if err != nil {

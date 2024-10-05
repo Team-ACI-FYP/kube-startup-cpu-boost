@@ -38,6 +38,11 @@ type ResourcePrediction struct {
 	CPULimits   string `json:"cpuLimits"`
 }
 
+type RequestPayload struct {
+	PodName      string `json:"podName"`
+	PodNamespace string `json:"podNamespace"`
+}
+
 func NewAutoPolicy(apiEndpoint string) ContainerPolicy {
 	return &AutoPolicy{
 		apiEndpoint: apiEndpoint,
@@ -125,9 +130,9 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	}
 
 	// Marshal the pod information to JSON
-	reqBody, err := json.Marshal(map[string]string{
-		"podName":      podName.(string),
-		"podNamespace": podNamespace.(string),
+	jsonData, err := json.Marshal(RequestPayload{
+		PodName:      podName.(string),
+		PodNamespace: podNamespace.(string),
 	})
 
 	if err != nil {
@@ -135,18 +140,19 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 		return nil, fmt.Errorf("failed to marshal pod information: %w", err)
 	}
 
-	fmt.Printf("reqBody: %+v\n", reqBody)
+	fmt.Println("reqBody: \n", jsonData)
 	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
 
 	// Create a new HTTP request with the pod information
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiEndpoint+"/cpu", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("POST", p.apiEndpoint+"/cpu", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	// Send the HTTP request
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println("failed to send request")
 		return nil, fmt.Errorf("failed to send request: %w", err)
