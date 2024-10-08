@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	. "github.com/onsi/ginkgo/v2"
+
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,7 +65,8 @@ func TestAutoDurationPolicy_getPrediction(t *testing.T) {
 
 		queryParams := r.URL.Query()
 
-		fmt.Println(queryParams)
+		fmt.Fprintln(GinkgoWriter, "queryParams:", queryParams)
+
 		imageName := queryParams.Get("imageName")
 
 		assert.Equal(t, "test-image", imageName)

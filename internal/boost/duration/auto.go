@@ -90,6 +90,7 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 
 	q := req.URL.Query()
 	q.Add("imageName", imageName)
+	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
