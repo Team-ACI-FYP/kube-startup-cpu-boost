@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/kube-startup-cpu-boost/internal/boost"
 	bpod "github.com/google/kube-startup-cpu-boost/internal/boost/pod"
-	resource "github.com/google/kube-startup-cpu-boost/internal/boost/resource"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -74,23 +73,7 @@ func (h *podCPUBoostHandler) Handle(ctx context.Context, req admission.Request) 
 
 func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boost.StartupCPUBoost, pod *corev1.Pod, log logr.Logger) {
 
-	fmt.Println("PodName: ", pod.Name)
-	fmt.Println("PodGenerateName: ", pod.GenerateName)
-	fmt.Println("PodUID: ", pod.UID)
-	fmt.Println("PodNamespace: ", pod.Namespace)
-
 	fmt.Printf("POD: %+v\n", pod)
-
-	podName := pod.Name
-	podGenerateName := pod.GenerateName
-	podNamespace := pod.Namespace
-
-	if podName == "" {
-		podName = podGenerateName
-	}
-
-	ctx = context.WithValue(ctx, resource.ContextKey("podName"), podName)
-	ctx = context.WithValue(ctx, resource.ContextKey("podNamespace"), podNamespace)
 
 	annotation := bpod.NewBoostAnnotation()
 	for i, container := range pod.Spec.Containers {
@@ -128,9 +111,6 @@ func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boos
 		}
 		pod.Labels[bpod.BoostLabelKey] = b.Name()
 	}
-
-	ctx = context.WithValue(ctx, resource.ContextKey("podName"), nil)
-	_ = context.WithValue(ctx, resource.ContextKey("podNamespace"), nil)
 }
 
 func updateBoostAnnotation(annot *bpod.BoostPodAnnotation, containerName string, resources corev1.ResourceRequirements) {

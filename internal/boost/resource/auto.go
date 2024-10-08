@@ -48,26 +48,9 @@ func NewAutoPolicy(apiEndpoint string) ContainerPolicy {
 	}
 }
 
-func (p *AutoPolicy) Requests(ctx context.Context) (apiResource.Quantity, error) {
-	prediction, err := p.getPrediction(ctx)
-	if err != nil {
-		return apiResource.Quantity{}, err
-	}
-	return apiResource.ParseQuantity(prediction.CPURequests)
-}
-
-func (p *AutoPolicy) Limits(ctx context.Context) (apiResource.Quantity, error) {
-	prediction, err := p.getPrediction(ctx)
-	if err != nil {
-		return apiResource.Quantity{}, err
-	}
-	return apiResource.ParseQuantity(prediction.CPULimits)
-}
-
 func (p *AutoPolicy) NewResources(ctx context.Context, container *corev1.Container) *corev1.ResourceRequirements {
 	log := ctrl.LoggerFrom(ctx).WithName("auto-cpu-policy")
-	prediction, err := p.getPrediction(ctx)
-
+	prediction, err := p.getPrediction(container)
 	if prediction == nil {
 		log.Error(err, "failed to get prediction")
 		return nil
@@ -113,19 +96,16 @@ func (p *AutoPolicy) setResource(resource corev1.ResourceName, resources corev1.
 	resources[resource] = target
 }
 
-func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, error) {
+func (p *AutoPolicy) getPrediction(container *corev1.Container) (*ResourcePrediction, error) {
 
-	fmt.Printf("ctx: %+v\n", ctx)
 	// Retrieve the pod information from the context
-	podName := ctx.Value(ContextKey("podName")).(string)
-	podNamespace := ctx.Value(ContextKey("podNamespace")).(string)
+	imageName := container.Image
 
-	fmt.Printf("podNamefromctx: %+v\n", podName)
-	fmt.Printf("podNamespacefromctx: %+v\n", podNamespace)
+	fmt.Println("Image Name From ctx : ", imageName)
 
-	if podName == "" || podNamespace == "" {
-		fmt.Println("pod information not found in context")
-		return nil, fmt.Errorf("pod information not found in context")
+	if imageName == "" {
+		fmt.Println("image name is empty")
+		return nil, fmt.Errorf("image name is empty")
 	}
 
 	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
@@ -138,8 +118,7 @@ func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, er
 	}
 
 	q := req.URL.Query()
-	q.Add("podName", podName)
-	q.Add("podNamespace", podNamespace)
+	q.Add("imageName", imageName)
 	req.URL.RawQuery = q.Encode()
 
 	client := &http.Client{}

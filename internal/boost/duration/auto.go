@@ -77,10 +77,10 @@ func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
 }
 
 func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, error) {
-	podName := pod.Name
-	podNamespace := pod.Namespace
 
-	log.Printf("getting predicted duration for pod %s in namespace %s", podName, podNamespace)
+	imageName := pod.Spec.Containers[0].Image
+
+	log.Printf("getting predicted duration for image: %s", imageName)
 
 	req, err := http.NewRequest("GET", p.apiEndpoint+"/duration", nil)
 	if err != nil {
@@ -89,9 +89,7 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 	}
 
 	q := req.URL.Query()
-	q.Add("podName", podName)
-	q.Add("podNamespace", podNamespace)
-	req.URL.RawQuery = q.Encode()
+	q.Add("imageName", imageName)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)

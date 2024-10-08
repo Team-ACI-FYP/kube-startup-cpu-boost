@@ -46,13 +46,9 @@ var _ = Describe("Auto Resource Policy", func() {
 		// Run the test case logic that triggers the fmt.Print statements.
 		policy = resource.NewAutoPolicy(mockServer.URL)
 
-		podName := "test-pod"
-		podNamespace := "test-namespace"
+		container.Image = "test-image"
 
-		ctx := context.WithValue(context.TODO(), resource.ContextKey("podName"), podName)
-		ctx = context.WithValue(ctx, resource.ContextKey("podNamespace"), podNamespace)
-
-		newResources = policy.NewResources(ctx, container)
+		newResources = policy.NewResources(context.TODO(), container)
 
 		fmt.Printf("newResources: %+v\n", newResources)
 
@@ -77,11 +73,9 @@ var _ = Describe("Auto Resource Policy", func() {
 					Expect(r.URL.Path).To(Equal("/cpu"))
 
 					queryParams := r.URL.Query()
-					podName := queryParams.Get("podName")
-					podNamespace := queryParams.Get("podNamespace")
+					imageName := queryParams.Get("imageName")
 
-					Expect(podName).To(Equal("test-pod"))
-					Expect(podNamespace).To(Equal("test-namespace"))
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "500m",
@@ -123,11 +117,9 @@ var _ = Describe("Auto Resource Policy", func() {
 					Expect(r.URL.Path).To(Equal("/cpu"))
 
 					queryParams := r.URL.Query()
-					podName := queryParams.Get("podName")
-					podNamespace := queryParams.Get("podNamespace")
+					imageName := queryParams.Get("imageName")
 
-					Expect(podName).To(Equal("test-pod"))
-					Expect(podNamespace).To(Equal("test-namespace"))
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "400m",
@@ -169,11 +161,9 @@ var _ = Describe("Auto Resource Policy", func() {
 					Expect(r.URL.Path).To(Equal("/cpu"))
 
 					queryParams := r.URL.Query()
-					podName := queryParams.Get("podName")
-					podNamespace := queryParams.Get("podNamespace")
+					imageName := queryParams.Get("imageName")
 
-					Expect(podName).To(Equal("test-pod"))
-					Expect(podNamespace).To(Equal("test-namespace"))
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "600m",

@@ -2,6 +2,7 @@ package duration
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -18,11 +19,9 @@ func TestAutoDurationPolicy_GetDuration(t *testing.T) {
 		assert.Equal(t, "/duration", r.URL.Path)
 
 		queryParams := r.URL.Query()
-		podName := queryParams.Get("podName")
-		podNamespace := queryParams.Get("podNamespace")
+		podName := queryParams.Get("imageName")
 
-		assert.Equal(t, "test-pod", podName)
-		assert.Equal(t, "test-namespace", podNamespace)
+		assert.Equal(t, "test-image", podName)
 
 		prediction := DurationPrediction{
 			Duration: "5m",
@@ -63,11 +62,11 @@ func TestAutoDurationPolicy_getPrediction(t *testing.T) {
 		assert.Equal(t, "/duration", r.URL.Path)
 
 		queryParams := r.URL.Query()
-		podName := queryParams.Get("podName")
-		podNamespace := queryParams.Get("podNamespace")
 
-		assert.Equal(t, "test-pod", podName)
-		assert.Equal(t, "test-namespace", podNamespace)
+		fmt.Println(queryParams)
+		imageName := queryParams.Get("imageName")
+
+		assert.Equal(t, "test-image", imageName)
 
 		prediction := DurationPrediction{
 			Duration: "5m",
