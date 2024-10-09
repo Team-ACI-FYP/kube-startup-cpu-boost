@@ -91,6 +91,8 @@ func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
 
 	p.durations[imageName] = parcedPrediction
 
+	log.Printf("Auto Duration: prediction for image %s is %s", imageName, newPrediction.Duration)
+
 	return time.ParseDuration(newPrediction.Duration)
 }
 
@@ -132,6 +134,7 @@ func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 	// Remove the duration from the cache
 	imageName := pod.Spec.Containers[0].Image
 	delete(p.durations, imageName)
+	log.Printf("Auto Duration: removed duration for image %s", imageName)
 
 	podName := pod.Name
 	podNamespace := pod.Namespace
