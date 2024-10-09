@@ -15,7 +15,6 @@
 package resource
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -38,32 +37,20 @@ type ResourcePrediction struct {
 	CPULimits   string `json:"cpuLimits"`
 }
 
+type RequestPayload struct {
+	PodName      string `json:"podName"`
+	PodNamespace string `json:"podNamespace"`
+}
+
 func NewAutoPolicy(apiEndpoint string) ContainerPolicy {
 	return &AutoPolicy{
 		apiEndpoint: apiEndpoint,
 	}
 }
 
-func (p *AutoPolicy) Requests(ctx context.Context) (apiResource.Quantity, error) {
-	prediction, err := p.getPrediction(ctx)
-	if err != nil {
-		return apiResource.Quantity{}, err
-	}
-	return apiResource.ParseQuantity(prediction.CPURequests)
-}
-
-func (p *AutoPolicy) Limits(ctx context.Context) (apiResource.Quantity, error) {
-	prediction, err := p.getPrediction(ctx)
-	if err != nil {
-		return apiResource.Quantity{}, err
-	}
-	return apiResource.ParseQuantity(prediction.CPULimits)
-}
-
 func (p *AutoPolicy) NewResources(ctx context.Context, container *corev1.Container) *corev1.ResourceRequirements {
 	log := ctrl.LoggerFrom(ctx).WithName("auto-cpu-policy")
-	prediction, err := p.getPrediction(ctx)
-
+	prediction, err := p.getPrediction(container)
 	if prediction == nil {
 		log.Error(err, "failed to get prediction")
 		return nil
@@ -109,49 +96,51 @@ func (p *AutoPolicy) setResource(resource corev1.ResourceName, resources corev1.
 	resources[resource] = target
 }
 
-func (p *AutoPolicy) getPrediction(ctx context.Context) (*ResourcePrediction, error) {
+func (p *AutoPolicy) getPrediction(container *corev1.Container) (*ResourcePrediction, error) {
 
-	fmt.Printf("ctx: %+v\n", ctx)
 	// Retrieve the pod information from the context
-	podName := ctx.Value(ContextKey("podName"))
-	podNamespace := ctx.Value(ContextKey("podNamespace"))
+	imageName := container.Image
 
-	if podName == nil || podNamespace == nil {
-		return nil, fmt.Errorf("pod information not found in context")
+	fmt.Println("Image Name From ctx : ", imageName)
+
+	if imageName == "" {
+		fmt.Println("image name is empty")
+		return nil, fmt.Errorf("image name is empty")
 	}
 
-	// Marshal the pod information to JSON
-	reqBody, err := json.Marshal(map[string]string{
-		"podName":      podName.(string),
-		"podNamespace": podNamespace.(string),
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal pod information: %w", err)
-	}
+	fmt.Printf("apiEndpoint: %+v\n", p.apiEndpoint)
 
 	// Create a new HTTP request with the pod information
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.apiEndpoint+"/cpu", bytes.NewBuffer(reqBody))
+	req, err := http.NewRequest("GET", p.apiEndpoint+"/cpu", nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create new request: %w", err)
+		fmt.Println("failed to create request")
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
 
-	// Send the HTTP request
-	resp, err := http.DefaultClient.Do(req)
+	q := req.URL.Query()
+	q.Add("imageName", imageName)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
+		fmt.Println("failed to send request")
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Check for a successful response status code
 	if resp.StatusCode != http.StatusOK {
+		fmt.Println("unexpected status code")
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+
+	fmt.Printf("resp: %+v\n", resp)
 
 	// Decode the response body into a ResourcePrediction struct
 	var prediction ResourcePrediction
 	if err := json.NewDecoder(resp.Body).Decode(&prediction); err != nil {
+		fmt.Println("failed to decode response")
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 

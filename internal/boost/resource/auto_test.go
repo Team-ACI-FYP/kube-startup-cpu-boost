@@ -46,13 +46,9 @@ var _ = Describe("Auto Resource Policy", func() {
 		// Run the test case logic that triggers the fmt.Print statements.
 		policy = resource.NewAutoPolicy(mockServer.URL)
 
-		podName := "test-pod"
-		podNamespace := "test-namespace"
+		container.Image = "test-image"
 
-		ctx := context.WithValue(context.TODO(), resource.ContextKey("podName"), podName)
-		ctx = context.WithValue(ctx, resource.ContextKey("podNamespace"), podNamespace)
-
-		newResources = policy.NewResources(ctx, container)
+		newResources = policy.NewResources(context.TODO(), container)
 
 		fmt.Printf("newResources: %+v\n", newResources)
 
@@ -73,12 +69,13 @@ var _ = Describe("Auto Resource Policy", func() {
 		Context("when the API returns valid predictions", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprintln(GinkgoWriter, "Request URL:", r.URL)
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					imageName := queryParams.Get("imageName")
+
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "500m",
@@ -118,11 +115,11 @@ var _ = Describe("Auto Resource Policy", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					imageName := queryParams.Get("imageName")
+
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "400m",
@@ -162,11 +159,11 @@ var _ = Describe("Auto Resource Policy", func() {
 			BeforeEach(func() {
 				mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					Expect(r.URL.Path).To(Equal("/cpu"))
-					Expect(r.Header.Get("Content-Type")).To(Equal("application/json"))
 
-					var pod corev1.Pod
-					err := json.NewDecoder(r.Body).Decode(&pod)
-					Expect(err).NotTo(HaveOccurred())
+					queryParams := r.URL.Query()
+					imageName := queryParams.Get("imageName")
+
+					Expect(imageName).To(Equal("test-image"))
 
 					prediction := resource.ResourcePrediction{
 						CPURequests: "600m",

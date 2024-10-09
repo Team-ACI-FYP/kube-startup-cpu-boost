@@ -28,8 +28,18 @@ const (
 	AutoDurationPolicyName = "AutoDuration"
 )
 
+type RequestPayload struct {
+	PodName      string `json:"podName"`
+	PodNamespace string `json:"podNamespace"`
+}
+
 type AutoDurationPolicy struct {
 	apiEndpoint string
+	durations   map[string]time.Duration
+}
+
+type DurationPrediction struct {
+	Duration string `json:"duration"`
 }
 
 func (p *AutoDurationPolicy) Name() string {
@@ -38,68 +48,100 @@ func (p *AutoDurationPolicy) Name() string {
 
 // Valid returns true if the pod is still within the duration
 func (p *AutoDurationPolicy) Valid(pod *v1.Pod) bool {
+
 	now := time.Now()
+
 	duration, err := p.GetDuration(pod)
 
 	if err != nil {
+		log.Printf("Auto Duration: error getting duration: %v", err)
 		return false
 	}
 
 	return pod.CreationTimestamp.Add(duration).After(now)
 }
 
-type DurationPrediction struct {
-	Duration string `json:"duration"`
-}
-
 func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
 	return &AutoDurationPolicy{
 		apiEndpoint: apiEndpoint,
+		durations:   make(map[string]time.Duration),
 	}
 }
 
 func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
-	prediction, err := p.getPrediction(pod)
+	imageName := pod.Spec.Containers[0].Image
+
+	if duration, exists := p.durations[imageName]; exists && duration != 0 {
+		return duration, nil
+	}
+
+	newPrediction, err := p.getPrediction(pod)
+
 	if err != nil {
+		log.Printf("Auto Duration: error getting prediction: %v", err)
 		return 0, err
 	}
-	return time.ParseDuration(prediction.Duration)
+
+	parcedPrediction, err := time.ParseDuration(newPrediction.Duration)
+
+	if err != nil {
+		log.Printf("Auto Duration: error parsing duration: %v", err)
+		return 0, err
+	}
+
+	p.durations[imageName] = parcedPrediction
+
+	log.Printf("Auto Duration: prediction for image %s is %s", imageName, newPrediction.Duration)
+
+	return time.ParseDuration(newPrediction.Duration)
 }
 
 func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, error) {
-	podName := pod.Name
-	podNamespace := pod.Namespace
 
-	podData, err := json.Marshal(map[string]string{
-		"podName":      podName,
-		"podNamespace": podNamespace,
-	})
+	imageName := pod.Spec.Containers[0].Image
 
+	log.Printf("Auto Duration: getting predicted duration for image: %s", imageName)
+
+	req, err := http.NewRequest("GET", p.apiEndpoint+"/duration", nil)
 	if err != nil {
+		log.Printf("error creating request: %v", err)
 		return nil, err
 	}
 
-	resp, err := http.Post(p.apiEndpoint+"/duration", "application/json", bytes.NewBuffer(podData))
+	q := req.URL.Query()
+	q.Add("imageName", imageName)
+	req.URL.RawQuery = q.Encode()
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("Auto Duration: error sending request: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	var prediction DurationPrediction
 	if err := json.NewDecoder(resp.Body).Decode(&prediction); err != nil {
+		log.Printf("Auto Duration: error decoding response: %v", err)
 		return nil, err
 	}
+
 	return &prediction, nil
 }
 
 func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 
+	// Remove the duration from the cache
+	imageName := pod.Spec.Containers[0].Image
+	delete(p.durations, imageName)
+	log.Printf("Auto Duration: removed duration for image %s", imageName)
+
 	podName := pod.Name
 	podNamespace := pod.Namespace
 
-	podData, err := json.Marshal(map[string]string{
-		"podName":      podName,
-		"podNamespace": podNamespace,
+	podData, err := json.Marshal(RequestPayload{
+		PodName:      podName,
+		PodNamespace: podNamespace,
 	})
 
 	if err != nil {
@@ -108,13 +150,14 @@ func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 
 	resp, err := http.Post(p.apiEndpoint+"/notify", "application/json", bytes.NewBuffer(podData))
 	if err != nil {
+		log.Printf("Auto Duration: error sending notify request: %v", err)
 		return err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected status code: %d", resp.StatusCode)
+		log.Printf("Auto Duration: unexpected notify status code: %d", resp.StatusCode)
 	}
 
 	return nil
