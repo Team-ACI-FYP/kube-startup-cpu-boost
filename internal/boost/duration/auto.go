@@ -64,6 +64,7 @@ func (p *AutoDurationPolicy) Valid(pod *v1.Pod) bool {
 func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
 	return &AutoDurationPolicy{
 		apiEndpoint: apiEndpoint,
+		durations:   make(map[string]time.Duration),
 	}
 }
 
@@ -82,6 +83,12 @@ func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
 	}
 
 	parcedPrediction, err := time.ParseDuration(newPrediction.Duration)
+
+	if err != nil {
+		log.Printf("Auto Duration: error parsing duration: %v", err)
+		return 0, err
+	}
+
 	p.durations[imageName] = parcedPrediction
 
 	return time.ParseDuration(newPrediction.Duration)
