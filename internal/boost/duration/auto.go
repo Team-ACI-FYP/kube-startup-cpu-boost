@@ -35,6 +35,7 @@ type RequestPayload struct {
 
 type AutoDurationPolicy struct {
 	apiEndpoint string
+	duration    time.Duration
 }
 
 type DurationPrediction struct {
@@ -48,18 +49,20 @@ func (p *AutoDurationPolicy) Name() string {
 // Valid returns true if the pod is still within the duration
 func (p *AutoDurationPolicy) Valid(pod *v1.Pod) bool {
 
-	log.Printf("Auto Duration: checking if pod is still within duration")
-
 	now := time.Now()
 
-	duration, err := p.GetDuration(pod)
+	if p.duration == 0 {
+		duration, err := p.GetDuration(pod)
 
-	if err != nil {
-		log.Printf("Auto Duration: error getting duration: %v", err)
-		return false
+		if err != nil {
+			log.Printf("Auto Duration: error getting duration: %v", err)
+			return false
+		}
+
+		p.duration = duration
 	}
 
-	return pod.CreationTimestamp.Add(duration).After(now)
+	return pod.CreationTimestamp.Add(p.duration).After(now)
 }
 
 func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
@@ -107,12 +110,13 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 		return nil, err
 	}
 
-	log.Printf("Auto Duration: predicted duration: %s", prediction.Duration)
-
 	return &prediction, nil
 }
 
 func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
+
+	// Reset duration to 0 to get the latest duration next time
+	p.duration = 0
 
 	podName := pod.Name
 	podNamespace := pod.Namespace
