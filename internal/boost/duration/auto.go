@@ -17,7 +17,6 @@ package duration
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -48,13 +47,15 @@ func (p *AutoDurationPolicy) Name() string {
 
 // Valid returns true if the pod is still within the duration
 func (p *AutoDurationPolicy) Valid(pod *v1.Pod) bool {
-	fmt.Printf("Pod in Duration policy: %v\n", pod)
+
+	log.Printf("Auto Duration: checking if pod is still within duration")
+
 	now := time.Now()
 
 	duration, err := p.GetDuration(pod)
 
 	if err != nil {
-		log.Printf("error getting duration: %v", err)
+		log.Printf("Auto Duration: error getting duration: %v", err)
 		return false
 	}
 
@@ -70,7 +71,7 @@ func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
 func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
 	prediction, err := p.getPrediction(pod)
 	if err != nil {
-		log.Printf("error getting prediction: %v", err)
+		log.Printf("Auto Duration: error getting prediction: %v", err)
 		return 0, err
 	}
 	return time.ParseDuration(prediction.Duration)
@@ -80,7 +81,7 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 
 	imageName := pod.Spec.Containers[0].Image
 
-	log.Printf("getting predicted duration for image: %s", imageName)
+	log.Printf("Auto Duration: getting predicted duration for image: %s", imageName)
 
 	req, err := http.NewRequest("GET", p.apiEndpoint+"/duration", nil)
 	if err != nil {
@@ -95,18 +96,18 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("error sending request: %v", err)
+		log.Printf("Auto Duration: error sending request: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	var prediction DurationPrediction
 	if err := json.NewDecoder(resp.Body).Decode(&prediction); err != nil {
-		log.Printf("error decoding response: %v", err)
+		log.Printf("Auto Duration: error decoding response: %v", err)
 		return nil, err
 	}
 
-	log.Printf("predicted duration: %s", prediction.Duration)
+	log.Printf("Auto Duration: predicted duration: %s", prediction.Duration)
 
 	return &prediction, nil
 }
@@ -127,14 +128,14 @@ func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 
 	resp, err := http.Post(p.apiEndpoint+"/notify", "application/json", bytes.NewBuffer(podData))
 	if err != nil {
-		log.Printf("error sending notify request: %v", err)
+		log.Printf("Auto Duration: error sending notify request: %v", err)
 		return err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("unexpected notify status code: %d", resp.StatusCode)
+		log.Printf("Auto Duration: unexpected notify status code: %d", resp.StatusCode)
 	}
 
 	return nil
