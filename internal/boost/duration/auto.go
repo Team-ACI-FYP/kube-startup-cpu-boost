@@ -35,7 +35,7 @@ type RequestPayload struct {
 
 type AutoDurationPolicy struct {
 	apiEndpoint string
-	duration    time.Duration
+	durations   map[string]time.Duration
 }
 
 type DurationPrediction struct {
@@ -51,18 +51,14 @@ func (p *AutoDurationPolicy) Valid(pod *v1.Pod) bool {
 
 	now := time.Now()
 
-	if p.duration == 0 {
-		duration, err := p.GetDuration(pod)
+	duration, err := p.GetDuration(pod)
 
-		if err != nil {
-			log.Printf("Auto Duration: error getting duration: %v", err)
-			return false
-		}
-
-		p.duration = duration
+	if err != nil {
+		log.Printf("Auto Duration: error getting duration: %v", err)
+		return false
 	}
 
-	return pod.CreationTimestamp.Add(p.duration).After(now)
+	return pod.CreationTimestamp.Add(duration).After(now)
 }
 
 func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
@@ -72,12 +68,23 @@ func NewAutoDurationPolicy(apiEndpoint string) *AutoDurationPolicy {
 }
 
 func (p *AutoDurationPolicy) GetDuration(pod *v1.Pod) (time.Duration, error) {
-	prediction, err := p.getPrediction(pod)
+	imageName := pod.Spec.Containers[0].Image
+
+	if duration, exists := p.durations[imageName]; exists && duration != 0 {
+		return duration, nil
+	}
+
+	newPrediction, err := p.getPrediction(pod)
+
 	if err != nil {
 		log.Printf("Auto Duration: error getting prediction: %v", err)
 		return 0, err
 	}
-	return time.ParseDuration(prediction.Duration)
+
+	parcedPrediction, err := time.ParseDuration(newPrediction.Duration)
+	p.durations[imageName] = parcedPrediction
+
+	return time.ParseDuration(newPrediction.Duration)
 }
 
 func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, error) {
@@ -115,8 +122,9 @@ func (p *AutoDurationPolicy) getPrediction(pod *v1.Pod) (*DurationPrediction, er
 
 func (p *AutoDurationPolicy) NotifyReversion(pod *v1.Pod) error {
 
-	// Reset duration to 0 to get the latest duration next time
-	p.duration = 0
+	// Remove the duration from the cache
+	imageName := pod.Spec.Containers[0].Image
+	delete(p.durations, imageName)
 
 	podName := pod.Name
 	podNamespace := pod.Namespace
