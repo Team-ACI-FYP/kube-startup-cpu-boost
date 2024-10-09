@@ -17,6 +17,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-logr/logr"
@@ -71,6 +72,9 @@ func (h *podCPUBoostHandler) Handle(ctx context.Context, req admission.Request) 
 }
 
 func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boost.StartupCPUBoost, pod *corev1.Pod, log logr.Logger) {
+
+	fmt.Printf("POD: %+v\n", pod)
+
 	annotation := bpod.NewBoostAnnotation()
 	for i, container := range pod.Spec.Containers {
 		policy, found := b.ResourcePolicy(container.Name)
