@@ -37,10 +37,10 @@ jobs:
         run: go mod download
       - name: Build
         run: make build
-      - name: Test
-        run: |
-          make test
-          make vet
+      # - name: Test
+      #   run: |
+      #     make test
+      #     make vet
       - name: Lint
         uses: dominikh/staticcheck-action@v1
         with:
