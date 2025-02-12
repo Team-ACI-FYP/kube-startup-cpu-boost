@@ -198,6 +198,10 @@ func (m *managerImpl) addStartupCPUBoost(boost StartupCPUBoost) {
 		key := boostKey{name: boost.Name(), namespace: boost.Namespace()}
 		m.timePolicyBoosts[key] = boost
 	}
+	if _, ok := boost.DurationPolicies()[duration.AutoDurationPolicyName]; ok {
+		key := boostKey{name: boost.Name(), namespace: boost.Namespace()}
+		m.timePolicyBoosts[key] = boost
+	}
 }
 
 // getStartupCPUBoost returns the startup-cpu-boost with a given name and namespace
