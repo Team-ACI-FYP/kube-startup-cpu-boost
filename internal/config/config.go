@@ -25,7 +25,7 @@ const (
 	ZapLogLevelDefault          = 0 // zapcore.InfoLevel
 	ZapDevelopmentDefault       = false
 	HTTP2Default                = false
-	RemoveLimitsDefault         = true
+	RemoveLimitsDefault         = false
 )
 
 // ConfigProvider provides the Kube Startup CPU Boost configuration

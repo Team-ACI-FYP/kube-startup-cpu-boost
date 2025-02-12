@@ -59,6 +59,7 @@ var _ = Describe("StartupCPUBoost webhook", func() {
 						DurationPolicy: v1alpha1.DurationPolicy{
 							Fixed:        &v1alpha1.FixedDurationPolicy{},
 							PodCondition: &v1alpha1.PodConditionDurationPolicy{},
+							AutoPolicy:   &v1alpha1.AutoDurationPolicy{},
 						},
 					},
 				}
