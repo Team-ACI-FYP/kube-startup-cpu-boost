@@ -95,9 +95,9 @@ func (h *podCPUBoostHandler) boostContainerResources(ctx context.Context, b boos
 			"newCpuRequests", resources.Requests.Cpu().String(),
 			"newCpuLimits", resources.Limits.Cpu().String(),
 		)
-		// if h.removeLimits {
-		// 	delete(resources.Limits, corev1.ResourceCPU)
-		// }
+		if h.removeLimits {
+			delete(resources.Limits, corev1.ResourceCPU)
+		}
 		pod.Spec.Containers[i].Resources = *resources
 		log.Info("pod resources increased")
 	}
